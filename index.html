@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>입력</title>
+<style>
+  body { margin:0; font-family: system-ui, Roboto, 'Noto Sans KR', sans-serif; background:#fff; color:#111; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 24px; }
+  .card { background:#fff; border:1px solid #e5e7eb; border-radius:16px; overflow:hidden; box-shadow:0 6px 16px rgba(0,0,0,.08); }
+  .hero { display:flex; justify-content:center; align-items:center; background:#fff; }
+  .hero img { width:100%; height:auto; object-fit:contain; display:block; margin:0 auto; max-width:100%; }
+  .content { padding:24px; text-align:center; }
+  .title { margin:0 0 8px; font-size:22px; font-weight:700; }
+  .desc  { margin:0 16px 20px; line-height:1.6; color:#444; }
+  .input-row { display:flex; gap:12px; justify-content:center; align-items:center; flex-wrap:wrap; margin-top:8px; }
+  .input-row input[type="text"], .input-row textarea {
+    flex: 1 1 320px; max-width:520px; padding:12px 14px;
+    border:1.5px solid #e5e7eb; border-radius:12px; font-size:16px;
+  }
+  .input-row textarea { min-height:120px; resize:vertical; }
+  .btn {
+    display:inline-block; padding:12px 24px; border-radius:12px; text-decoration:none; font-weight:700;
+    background:#F5A623; color:#111; border:1.5px solid #000; box-shadow:0 1px 0 rgba(0,0,0,.35) inset; transition:.06s;
+  }
+  .btn:hover { transform:translateY(-1px); filter:brightness(1.03); }
+  .btn:active { transform:translateY(0); filter:brightness(.98); }
+  .error { color:#dc2626; margin-top:10px; font-weight:600; }
+  .note  { color:#2563eb; margin-top:12px; font-weight:600; }
+  .stack { display:flex; flex-direction:column; gap:12px; }
+  .buttons { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card" id="app"><!-- 뷰가 여기 렌더링됩니다 --></div>
+  </div>
+
+<script>
+  // ===== 데이터 (Flask의 리스트 그대로) =====
+  const SPECIAL_MESSAGES = [
+    "칭찬은 감사하지만..저 애인 있어요💖",
+    "또 칭찬이라니 마음이 따뜻해져요.🌸 하지만..더 이상은 곤란해요😊",
+    "그만하시라니까요! 한번만 더하면 저 화내요"
+  ];
+  const FAIL_MESSAGES = [
+    "처음은 그럴수 있어",
+    "또 틀렸어?",
+    "세번째 도전이라니! 포기하지마",
+    "아직도 도전중? 끈기 인정",
+    "힌트..써주세요..",
+    "혹시..내 존재를 눈치챈거야?",
+    " <br> <br> "
+  ];
+
+  // ===== 상태 (브라우저 새로 열면 초기화됨) =====
+  let special1Count = 0;
+  let specialText = "";
+  let wrong1 = 0;
+  let wrong2 = 0;
+
+  // 입력값 보존 (오답/“예뻐요” 시 입력칸 유지)
+  let step1Input = "";
+  let step2Input = "";
+
+  const $ = (sel) => document.querySelector(sel);
+  const app = $("#app");
+
+  // ===== 뷰 렌더러들 =====
+  function renderStep1() {
+    app.innerHTML = `
+      <div class="hero">
+        <img src="static/helliveyoung.jpg" alt="1단계 이미지">
+      </div>
+      <div class="content">
+        <h1 class="title">Hellive-Young에 오신 것을 환영합니다!</h1>
+        <p class="desc">필요하시면~언제든지~ 말씀해~주~~세요~~~</p>
+
+        <form class="input-row" id="form1">
+          <input type="text" name="answer" placeholder="예뻐요" autocomplete="off" required value="${escapeHtml(step1Input)}">
+          <button class="btn" type="submit">제출</button>
+        </form>
+
+        ${specialText ? `<div class="note">${specialText}</div>` : ``}
+        ${wrong1 > 0 ? `<div class="error">${FAIL_MESSAGES[Math.min(wrong1-1, FAIL_MESSAGES.length-1)]}</div>` : ``}
+      </div>
+    `;
+    $("#form1").addEventListener("submit", handleSubmit1);
+  }
+
+  function renderStep2() {
+    app.innerHTML = `
+      <div class="hero">
+        <img src="static/lipstick.jpg" alt="2단계 이미지">
+      </div>
+      <div class="content">
+        <h1 class="title">음..빨간색 립스틱은 많아서요.</h1>
+        <p class="desc">정확히 무슨 색상을 말씀하시는 건가요?</p>
+
+        <form class="input-row" id="form2">
+          <input type="text" name="answer" placeholder="#??????" autocomplete="off" required value="${escapeHtml(step2Input)}">
+          <button class="btn" type="submit">제출</button>
+        </form>
+
+        ${wrong2 > 0 ? `<div class="error">${FAIL_MESSAGES[Math.min(wrong2-1, FAIL_MESSAGES.length-1)]}</div>` : ``}
+      </div>
+    `;
+    $("#form2").addEventListener("submit", handleSubmit2);
+  }
+
+  function renderFinal() {
+    app.innerHTML = `
+      <div class="content">
+        <div class="stack">
+          <div class="hero">
+            <img src="static/discontinued.png" alt="최종 상단 이미지">
+          </div>
+          <div class="hero">
+            <img src="static/aliveyoung.png" alt="최종 하단 이미지">
+          </div>
+        </div>
+
+        <h1 class="title" style="margin-top:16px;">아 그 립스틱은 단종된지 오래됐어요.</h1>
+        <p class="desc">"이승"에 있는 Alive-Young에 가시면 구매하실수 있는 제품이에요^^</p>
+
+        <div class="buttons" style="margin-top:20px; justify-content:center;">
+          <a class="btn" href="#/">네 감사합니다!<br> -처음으로-</a>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderClose() {
+    app.innerHTML = `
+      <div class="content">
+        <div class="hero" style="margin-top:16px;">
+          <img src="static/whitedoorclosed.jpg" alt="직원 이미지" style="max-width:80%; height:auto; border-radius:12px;">
+        </div>
+        <p class="desc" style="margin-top:16px;">엏... 아무래도 직원을 곤란하게 해서 쫒겨난듯 하다.<br></p>
+      </div>
+    `;
+    // 브라우저가 스크립트로 열린 창이 아니면 window.close()가 막힐 수 있음
+    try { window.close(); } catch(e) {}
+  }
+
+  // ===== 폼 핸들러 =====
+  function handleSubmit1(e) {
+    e.preventDefault();
+    const v = e.target.answer.value.trim();
+    step1Input = v; // 입력 유지
+
+    if (v === "예뻐요" || v === "예뼈요") {
+      special1Count += 1;
+      if (special1Count >= 4) {
+        location.hash = "#/close";
+        return;
+      }
+      const idx = Math.min(special1Count - 1, SPECIAL_MESSAGES.length - 1);
+      specialText = SPECIAL_MESSAGES[idx];
+      renderStep1();  // 리다이렉트 없이 다시 렌더(입력값 보존)
+      return;
+    }
+
+    if (v.toLowerCase() === "lipstick") {
+      // 다음 단계로
+      wrong1 = 0;
+      step2Input = ""; // 다음 단계 초기화
+      location.hash = "#/step2";
+      return;
+    }
+
+    // 오답
+    wrong1 += 1;
+    renderStep1(); // 입력값 유지한 채 다시 렌더
+  }
+
+  function handleSubmit2(e) {
+    e.preventDefault();
+    const v = e.target.answer.value.trim();
+    step2Input = v; // 입력 유지
+
+    if (v.toLowerCase() === "#ff0000") {
+      wrong2 = 0;
+      location.hash = "#/final";
+      return;
+    }
+
+    // 오답
+    wrong2 += 1;
+    renderStep2(); // 입력값 유지
+  }
+
+  // ===== 라우팅 (해시 기반) =====
+  function router() {
+    const hash = location.hash || "#/";
+    switch (hash) {
+      case "#/":
+        // 새로 들어올 때 “세션”처럼 모두 초기화
+        special1Count = 0; specialText = ""; wrong1 = 0; step1Input = "";
+        renderStep1();
+        break;
+      case "#/step2":
+        renderStep2();
+        break;
+      case "#/final":
+        renderFinal();
+        break;
+      case "#/close":
+        renderClose();
+        break;
+      default:
+        location.hash = "#/";
+    }
+  }
+
+  window.addEventListener("hashchange", router);
+  window.addEventListener("load", router);
+
+  // XSS 방지용 간단 escape
+  function escapeHtml(s) {
+    return String(s)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+</script>
+</body>
+</html>
