@@ -53,6 +53,11 @@
     " <br> <br> "
   ];
 
+  // ✅ 여러 정답(소문자로 관리)
+const ACCEPT_STEP1 = ["lipstick", "립스틱"];  // 1단계: 다음 단계로 넘기는 정답들
+const ACCEPT_STEP2 = ["#ff0000", "ff0000"];  // 2단계: 최종 화면으로 넘기는 정답들
+
+  
   // ===== 상태 (브라우저 새로 열면 초기화됨) =====
   let special1Count = 0;
   let specialText = "";
@@ -175,20 +180,24 @@
   }
 
   function handleSubmit2(e) {
-    e.preventDefault();
-    const v = e.target.answer.value.trim();
-    step2Input = v; // 입력 유지
+  e.preventDefault();
+  const v = e.target.answer.value.trim();
+  step2Input = v; // 입력 유지
+  const low = v.toLowerCase();
 
-    if (v.toLowerCase() === "#ff0000") {
-      wrong2 = 0;
-      location.hash = "#/final";
-      return;
-    }
-
-    // 오답
-    wrong2 += 1;
-    renderStep2(); // 입력값 유지
+  // ✅ 정답 단어가 문장 안에 포함되어도 통과 (여러 정답 지원)
+  const isStep2Correct = ACCEPT_STEP2.some(ans => low.includes(ans));
+  if (isStep2Correct) {
+    wrong2 = 0;
+    location.hash = "#/final";
+    return;
   }
+
+  // 오답
+  wrong2 += 1;
+  renderStep2(); // 입력값 유지
+}
+
 
   // ===== 라우팅 (해시 기반) =====
   function router() {
@@ -228,4 +237,5 @@
 </script>
 </body>
 </html>
+
 
