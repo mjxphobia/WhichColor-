@@ -166,13 +166,16 @@ const ACCEPT_STEP2 = ["#ff0000", "ff0000"];  // 2단계: 최종 화면으로 넘
       return;
     }
 
-    if (v.toLowerCase() === "lipstick") {
-      // 다음 단계로
+    // ✅ 정답 단어가 문장 안에 포함되어도 통과 (여러 정답 지원)
+    const low = v.toLowerCase();
+    const isStep1Correct = ACCEPT_STEP1.some(ans => low.includes(ans));
+    if (isStep1Correct) {
       wrong1 = 0;
       step2Input = ""; // 다음 단계 초기화
       location.hash = "#/step2";
       return;
     }
+
 
     // 오답
     wrong1 += 1;
@@ -237,5 +240,6 @@ const ACCEPT_STEP2 = ["#ff0000", "ff0000"];  // 2단계: 최종 화면으로 넘
 </script>
 </body>
 </html>
+
 
 
